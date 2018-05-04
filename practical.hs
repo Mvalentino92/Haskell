@@ -10,7 +10,7 @@ iso :: [(Char,Char)] -> Bool
 iso [] = True
 iso (x:xs) = (foldr (&&) True bools) && iso xs
            where matches = getMatches x xs
-                 bools = [x == x' {-|| x == (rtuple x')-} | x' <- matches] 
+                 bools = [x == x' || x == (rtuple x') | x' <- matches] 
 
 isIso :: String -> String -> Bool
 isIso a b = iso $ zip a b
@@ -35,4 +35,4 @@ qsort (x:xs) = qsort smaller ++ [x] ++ qsort larger
                    larger = [x' | x' <- xs, x' > x] 
 
 gdups :: Ord a => [a] -> [a]
-gdups xs = getDuplicate $ qsort xs
+gdups = getDuplicate . qsort
