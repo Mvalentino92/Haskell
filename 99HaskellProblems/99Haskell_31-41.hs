@@ -56,4 +56,26 @@ tot n = product [(p-1)*p^(m-1) | (p,m) <- occur $ primefactors n]
 
 --Problem 38: Just a comparison between the two totients, no solutions required
 
+--Problem 39: Prime range
+primeRange :: Integer -> Integer -> [Integer]
+primeRange ln hn = alt left right
+           where half = div (ln + hn) 2
+                 left = [l | l <- [(half+1),half..ln], isPrime l]
+                 right = [r | r <- [half+2..hn], isPrime r]
+                 alt [] ys = ys
+                 alt xs [] = xs
+                 alt (x:xs) (y:ys) = x : y : (alt xs ys)
 
+--Problem 40: Goldbachs conjecture, print out 2 primes that equal even number
+goldbach :: Integer -> (Integer,Integer)
+goldbach n = head [(p1,p2) | (p1,p2) <- zipPrimes pr pr, p1 + p2 == n]
+         where pr = primeRange 2 (n-2)
+               zipPrimes _ [] = []
+               zipPrimes xs ys = zip xs ys ++ zipPrimes xs (tail ys)
+
+--Problem 41: Print a range of goldbach numbers in a given range
+goldbachList :: Integer -> Integer -> [(Integer,Integer)]
+goldbachList ln hn = [goldbach n | n <- [ln',(ln'+2)..hn]]
+                 where ln' = if ln < 2 then 4 
+                             else if mod ln 2 == 0 then ln
+                             else ln + 1
