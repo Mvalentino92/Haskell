@@ -130,3 +130,65 @@ peval :: Num a => [a] -> a -> a
 peval [] _ = 0
 peval [c] _ = c
 peval (c:cs) x = (c+) $ sum $ zipWith (*) cs [product $ replicate n x | n <- [1..]]
+
+--Polynomial addition
+padd :: Num a => [a] -> [a] -> [a]
+padd [] [] = []
+padd xs [] = xs
+padd [] ys = ys
+padd (x:xs) (y:ys) = (x+y) : padd xs ys
+
+--Polynomial multiplication
+pmult :: Num a => [a] -> [a] -> [a]
+pmult [] _ = []
+pmult (x:xs) ys = padd (map (*x) ys) (0:pmult xs ys)
+
+--Polynomial differentiation
+pdiff :: (Num a,Enum a) => [a] -> [a]
+pdiff [] = []
+pdiff (x:xs) = [c*n | (c,n) <- zip xs [1..]]
+
+--Polynomial integration
+pint :: (Fractional a,Enum a) => [a] -> [a]
+pint [] = []
+pint xs = 0 : [c/n | (c,n) <- zip xs [1..]]
+
+--Infinitely rotates an array and stores the results 
+rotall :: [a] -> [[a]]
+rotall = scanl1 (\acc x -> tail acc ++ [head acc]) . repeat
+
+--Calculates lagrange polynomial
+lag' :: Fractional a => [[(a,a)]] -> [a]
+lag' [] = []
+lag' (p:ps) = padd poly $ lag' ps
+     where p' = head p
+           ps' = tail p
+           terms = [[-xi,1] | (xi,yi) <- ps']
+           numerator = foldr1 pmult terms
+           denominator = product [fst p' - xi | (xi,yi) <- ps']
+           poly = map (\x -> snd p' * x / denominator) numerator
+
+--Lagrange wrapper
+lag :: Fractional a => [(a,a)] -> [a]
+lag ps = lag' $ take (length ps) (rotall ps)
+
+--Cubic Spline
+spline :: Fractional a => [(a,a)] -> [[a]]
+spline ps 
+         | length ps >= 4 = (lag $ take 4 ps) : (spline $ tail ps)
+         | otherwise = []
+
+--Finds the index of the of first value larger (for cubic spline)
+findex :: (Fractional a, Ord a) => [(a,a)] -> a -> Int
+findex ps t = head [i | (i,(x,y)) <- zip [0..] ps, x > t]
+
+--Evalutes a cubic spline (Pass value, data points, and spline
+splineval :: (Fractional a, Ord a) => a -> [(a,a)] -> [[a]] -> a
+splineval t ps spl = sum $ zipWith (*) [0.25,0.50,0.25] [peval (spl !! i) t | i <- valid]
+        where tdex = findex ps t
+              three = [tdex-1,tdex-2,tdex-3]
+              valid = take 3 $ cycle $ filter (\x -> x >= 0 && x < length spl) three
+
+--Evaluates cubic spline, calculates spline for you (pass value and data points)
+splineval' :: (Fractional a, Ord a) => a -> [(a,a)] -> a
+splineval' t ps = splineval t ps $ spline ps
