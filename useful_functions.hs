@@ -2,6 +2,7 @@
  -or need to use for class for exercises-}
 import System.Random
 import Debug.Trace
+import Data.List
 
 --Returns n amount of linearly spaced values between x and y
 linspace :: Double -> Double -> Int -> [Double]
@@ -146,12 +147,12 @@ pmult (x:xs) ys = padd (map (*x) ys) (0:pmult xs ys)
 --Polynomial differentiation
 pdiff :: (Num a,Enum a) => [a] -> [a]
 pdiff [] = []
-pdiff (x:xs) = [c*n | (c,n) <- zip xs [1..]]
+pdiff (_:xs) = zipWith (*) xs [1..]
 
 --Polynomial integration
 pint :: (Fractional a,Enum a) => [a] -> [a]
 pint [] = []
-pint xs = 0 : [c/n | (c,n) <- zip xs [1..]]
+pint xs = 0 : zipWith (/) xs [1..]
 
 --Infinitely rotates an array and stores the results 
 rotall :: [a] -> [[a]]
@@ -192,3 +193,81 @@ splineval t ps spl = sum $ zipWith (*) [0.25,0.50,0.25] [peval (spl !! i) t | i 
 --Evaluates cubic spline, calculates spline for you (pass value and data points)
 splineval' :: (Fractional a, Ord a) => a -> [(a,a)] -> a
 splineval' t ps = splineval t ps $ spline ps
+
+--FUNCTIONS FOR RREF-------------------------------------------------
+rowKill :: (Fractional a) => [a] -> [a] -> [a]
+rowKill (x:xs) (y:ys) = zipWith (\x' y' -> x'*k + y') (x:xs) (y:ys)
+               where k = -y/x
+
+ref :: (Fractional a,Eq a) => [[a]] -> [[a]]
+ref [xs] = let x = head xs in [map (/x) xs]
+ref (xs:xss)
+           | x /= 0 = xs' : (ref $ map tail xss')
+           | otherwise = ref $ swapRows xs xss
+            where xss' = map (rowKill xs) xss
+                  xs' = map (/x) xs
+                  x = head xs
+
+bref :: (Fractional a) => [[a]] -> [[a]]
+bref [xs] = [xs]
+bref (xs:xss) = xs : (bref xss'')
+            where xss' = map (rowKill xs) $ trimDiag xss
+                  xss'' = zipWith (\x y -> take (length x - length y) x ++ y) xss xss'
+
+
+trimDiag :: (Num a) => [[a]] -> [[a]]
+trimDiag xss = [(drop i xs) | (i,xs) <- zip [1..] xss]
+
+swapRows :: (Num a,Eq a) => [a] -> [[a]] -> [[a]]
+swapRows xs (xs':xss) 
+          | head xs == 0 = (swapRows xs' xss) ++ [xs]
+          | otherwise = [xs] ++ (xs':xss)
+
+--Actual rref function
+rref :: (Fractional a,Eq a) => [[a]] -> [a]
+rref = map last . reverse . bref . reverse . ref
+-------------------------------------------------------------------------
+
+--Constructs matrix for central difference approximations
+cmat :: (Fractional a,Enum a) => Int -> [[a]]
+cmat n = zipWith (\x y -> x ++ [y]) [map (^i) row | i <- [0..(n-1)]] col
+       where bounds = fromIntegral $ div n 2
+             col = 0 : 1 : replicate (n-2) 0.0
+             row = [-bounds,(-bounds + 1)..bounds]
+
+--Constructs matrix for forward difference
+fmat :: (Fractional a,Enum a) => Int -> [[a]]
+fmat n = zipWith (\x y -> x ++ [y]) [map (^i) row | i <- [0..(n-1)]] col
+       where col = 0 : 1 : replicate (n-2) 0.0
+             row = [0..fromIntegral n - 1]
+
+--Constructs matrix for backwards difference
+bmat :: (Fractional a,Enum a) => Int -> [[a]]
+bmat n = zipWith (\x y -> x ++ [y]) [map (^i) row | i <- [0..(n-1)]] col
+       where col = 0 : 1 : replicate (n-2) 0.0
+             n' = fromIntegral (-(n-1))
+             row = [n',n'+1..0]
+
+--Cent/for/back diff of different orders (mat func ,y values, and spacing)
+dord :: (Fractional a,Eq a,Enum a) => (Int -> [[a]]) -> [a] -> a -> a
+dord f ys h = (1/h) * (sum $ zipWith (*) ys coefs)
+         where mat = f $ length ys
+               coefs = rref mat
+
+--Takes at least 9 points, and returns the derivative for all points
+dords :: (Fractional a, Eq a, Enum a) => [a] -> a -> [a]
+dords ys h = (map (\ys' -> dord fmat ys' h) fwds) ++
+             (map (\ys' -> dord cmat ys' h) ctrls) ++
+             (map (\ys' -> dord bmat ys' h) bkwds)
+      where strides = map (take 7) $
+                      takeWhile ((>=7) . length) $ tails ys
+            fwds = take 3 strides
+            bkwds = drop (length strides - 3) strides 
+            ctrls = strides
+
+--Richardson Extrapolation
+rextra :: [Double] -> Int -> Double
+rextra [y] _ = y
+rextra ys k = rextra [(a * y1 - y2)/(a-1) | (y1,y2) <- yss] (k+2)
+     where yss = zip ys $ tail ys
+           a = 2^k
