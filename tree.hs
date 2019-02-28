@@ -3,6 +3,9 @@ import System.Random
 --Binary Search Tree 
 data Tree a =  Nil | Node (Tree a) a (Tree a) deriving (Show,Eq,Ord)
 
+fac 1 = 1
+fac n = n*fac(n-1)
+
 --Adds an element to a Binary Search Tree
 treeAdd :: (Ord a, Eq a) => (Tree a) -> a -> (Tree a)
 treeAdd Nil ele = Node Nil ele Nil
@@ -20,13 +23,17 @@ treeToList :: (Ord a, Eq a) => (Tree a) -> [a]
 treeToList Nil = []
 treeToList (Node l n r) = (treeToList l) ++ [n] ++ (treeToList r)
 
+treeToListPre :: (Ord a, Eq a) => (Tree a) -> [a]
+treeToListPre Nil = []
+treeToListPre (Node l n r) = n : (treeToListPre l) ++ (treeToListPre r)
+
 --Checks if an element is present in a Binary Search Tree
 isPresent :: (Eq a, Ord a) => (Tree a) -> a -> Bool
 isPresent Nil _ = False
 isPresent (Node l n r) ele 
           | ele == n = True
-          | ele < n = isPresent l ele || False
-          | otherwise = False || isPresent r ele
+          | ele < n = isPresent l ele
+          | otherwise = isPresent r ele
 
 --Get the number of elements in a Binary Search Tree
 treeSize :: (Tree a) -> Int
@@ -38,6 +45,8 @@ treeDepth :: (Tree a) -> Int
 treeDepth Nil = 0
 treeDepth (Node l _ r) = 1 + max (treeDepth l) (treeDepth r)
 
-toAdd  = take 10 $ (randoms (mkStdGen 7)) :: [Int]
-t = addValues (Nil) toAdd
-l = treeToList t
+main = do
+     let toAdd  = take 1000000 $ (randoms (mkStdGen 7)) :: [Int]
+         t = addValues (Nil) toAdd
+         l = treeToList t
+     print $ length l
