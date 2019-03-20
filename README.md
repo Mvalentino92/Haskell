@@ -7,4 +7,6 @@ I'll also just being throwing some random Haskell files up here, during my journ
 
 **useful_functions.hs:** Functions I wrote during my Numerical Analysis class. 
 
+**EightPuzzle.hs:** Solves the class Eight Puzzle problem using the A* algorithm. My first implementation of an example from an AI book I'm reading. Did it in Haskell, phew! It's not very efficient, but Haskell! Will most likely use Julia for the rest of the examples I do from the book.
+
 **SetPartitions.hs:** Calculates the number of ways a set can be partitioned. This is also known as Bell Numbers. I figured it out from scratch though, before goolging to confirm.
